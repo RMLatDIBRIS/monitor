@@ -67,11 +67,6 @@ verify_end(TraceExp) :- may_halt(TraceExp) ->
 verify_events(TraceStream, TraceExp, EventId) :-
 	json_read_dict(TraceStream, Event),
 	(next(TraceExp, Event, NewTraceExp)
-<<<<<<< HEAD
 	 -> (NewEventId is EventId+1, verify(TraceStream, NewTraceExp, NewEventId))
 	 ;  (dict_pairs(Event, _, Fields), log(Fields), lognl, false)
-=======
-	 -> (log('matched event #'), log(Event), lognl, log(NewTraceExp), lognl, NewEventId is EventId+1, verify(TraceStream, NewTraceExp, NewEventId))
-	 ;  (log('ERROR on event '), dict_pairs(Event, _, Fields), log(Fields), lognl, false)
->>>>>>> 729ac272e41c1e64dc4252ffce16b793846c6f35
 	).
