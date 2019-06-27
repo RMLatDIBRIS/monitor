@@ -235,7 +235,7 @@ concat(T1, T2, T1*T2).
 
 conj(eps/\eps, eps) :- !.
 conj(1,T,T) :- !.
-conj(1,T,T) :- !.
+conj(T,1,T) :- !.
 conj((T1l/\T1r), T2, T1l/\(T1r/\T2)) :- !.
 conj(T1, T2, T1/\T2).
 
