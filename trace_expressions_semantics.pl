@@ -108,7 +108,7 @@ next(clos(T1), E, T3, S) :- !,next(T1, E, T2, S),prefix_clos(T2,T3).
 
 % regex-like operators
 next(star(T1), E, T2*star(T1), S) :- !, next(T1, E, T2, S).
-next(plus(T1), E, T2*plus(T1), S) :- !, next(T1, E, T2, S).
+next(plus(T1), E, T2*star(T1), S) :- !, next(T1, E, T2, S).
 next(optional(T1), E, T2, S) :- !, next(T1, E, T2, S).
 
 %% proposal for the with operator, to be tested
