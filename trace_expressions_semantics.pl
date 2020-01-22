@@ -408,6 +408,9 @@ lookup(X,[Y=V1|Subs1],V2,[Y=V1|Subs2]) :- lookup(X,Subs1,V2,Subs2).
 
 copy_term_with_vars(ET,FreshET,Subs) :- copy_term_with_vars(ET,[],FreshET,Subs).
 
+% fix by Davide (Jan 22, 2020), variables should only occurs because of dictionary labels, for instance _{x:1,y:2} 
+copy_term_with_vars(X,Subs,X,Subs) :- var(X),!. 
+
 copy_term_with_vars(var(X),Subs1,Var,Subs2) :- lookup(X,Subs1,Var,Subs2),!.
 copy_term_with_vars(ET1,Subs1,ET2,Subs2) :- ET1=..[F|Args1],copy_term_with_vars_list(Args1,Subs1,Args2,Subs2),ET2=..[F|Args2].
 
