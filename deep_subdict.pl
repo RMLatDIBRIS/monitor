@@ -2,8 +2,12 @@
 
 % three cases: dictionaries, lists and others
 
+% fix by Davide (Jan 22, 2020)
+% deep_subdict(V,_{x:1,y:2}). should succeeds with V = _7026{x:1, y:2} and not V = _7276{}
+deep_subdict(X, D) :- var(X),!,X=D.
+
 % if the first dict is empty we're done
-deep_subdict(_{}, D) :- is_dict(D).
+deep_subdict(_{}, D) :- is_dict(D),!.
 
 % dictionaries
 deep_subdict(D1, D2) :-
