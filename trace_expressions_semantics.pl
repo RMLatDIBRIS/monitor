@@ -11,6 +11,8 @@
 /*    May, 2019: support for local const declarations                                      */
 /*    June, 2020: some fixes: added all cuts for next/4, may_halt/1, apply_sub_trace_exp/3 */
 /*                fixed precedence to correctly manage cut in next/4 for guarded terms     */
+/*    June, 2020: added singleton event type patterns to replace the prefixing operator    */
+/*                prefixing not removed for legacy reasons                                 */
 /*******************************************************************************************/
 
 /* Transition rules */
@@ -125,6 +127,10 @@ next(with(ET,T,G), E, T, S) :- !,match(E, ET, S),apply_sub_pred(S,G,G2),G2.
 %% proposal for local constant declarations
 next(const(Vars, Exps, T1), E, T3, RetSubs) :-
     eval_exps(Vars,Exps,Subs),apply_sub_trace_exp(Subs,T1,T2),!,next(T2,E,T3,RetSubs). %% cut after apply_sub_trace_exp is essential to avoid divergence in case of failure due to coinduction
+
+%% Davide: support for singleton event type pattern
+%% warning: this should be always the last clause for next
+next(ETP, E, eps, S) :- !,match(E, ETP, S).  %%% thanks to cuts,  nonvar(ETP) or other conditions on ETP should not be needed
 
 %% eval predicates for arguments of generics: for the moment only number/boolean expressions, strings and atoms are supported
 num_exp(Exp) :- Exp=..[Op|_],memberchk(Op,[+,-,/,*]).
@@ -367,6 +373,10 @@ apply_sub_trace_exp(S,with(ET,T,G),with(ET2,T2,G2)) :- !, apply_sub_event_type(S
 
 %% proposal for constant declarations
 apply_sub_trace_exp(S,const(Vars, Exps1, T1),const(Vars, Exps2, T2)) :- !,apply_sub_arg(S,Exps1,Exps2),split(Vars,S,_Svars,Srest),apply_sub_trace_exp(Srest,T1,T2).
+
+%% Davide: support for singleton event type pattern
+%% warning: this should be always the last clause for apply_sub_trace_exp
+apply_sub_trace_exp(S, ETP1, ETP2) :- !,apply_sub_event_type(S,ETP1,ETP2). %%% thanks to cuts,  nonvar(ETP1) or other conditions on ETP1 should not be needed
 
 % substitution inside event types
 apply_sub_event_type([],ET,ET) :- !.
