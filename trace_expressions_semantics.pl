@@ -9,7 +9,7 @@
 /*    March 2, 2018: test with generic trace expressions                                   */
 /*    January, 2019: support for RML                                                       */
 /*    May, 2019: support for local const declarations                                      */
-/*    June, 2020: some fixes: added all cuts for next/4 and apply_sub_trace_exp/3          */
+/*    June, 2020: some fixes: added all cuts for next/4, may_halt and apply_sub_trace_exp/3     */
 /*                fixed precedence to correctly manage cut in next/4 for guarded terms     */
 /*******************************************************************************************/
 
@@ -151,6 +151,9 @@ match(E,ET,Subs) :- copy_term_with_vars(ET,FreshET,Subs), match(E,FreshET). %%,w
 %% solve(P,Subs) :- !,copy_term_with_vars(P,[],FreshP,Subs),FreshP.
 solve(P,Subs) :- !,copy_term_with_vars(P,FreshP,Subs),FreshP.
 
+%% June 2020, Davide: added explicit failure for prefixing
+may_halt(_:_) :- !,fail.
+
 may_halt(1) :- !.
 may_halt(eps) :- !.
 may_halt(T1\/T2) :- (may_halt(T1), !; may_halt(T2)).
@@ -173,7 +176,7 @@ may_halt((_>T;_)) :- !, may_halt(T).
 may_halt(app(gen(X,T1),Arg)) :- atom(X),!,eval(Arg,Val),apply_sub_trace_exp([X=Val],T1,T2),!,may_halt(T2). %% usual comment for the cut after apply_sub_trace_exp   
 
 %% generic clause
-may_halt(app(gen(Vars,T1),Args)) :- eval_exps(Vars,Args,Subs),apply_sub_trace_exp(Subs,T1,T2),!,may_halt(T2). %% usual comment for the cut after apply_sub_trace_exp
+may_halt(app(gen(Vars,T1),Args)) :- !,eval_exps(Vars,Args,Subs),apply_sub_trace_exp(Subs,T1,T2),!,may_halt(T2). %% usual comment for the cut after apply_sub_trace_exp
 
 %% proposal for guarded trace expressions
 %% this should be more in line with the ecoop19/oopsla19 calculus
@@ -186,19 +189,19 @@ may_halt(guarded(P,T1,T2)) :- !,P->may_halt(T1);may_halt(T2).
 
 %% proposal for prefix closure
 
-may_halt(clos(_)).
+may_halt(clos(_)) :- !.
 
 % regex-like operators
-may_halt(star(_)).
+may_halt(star(_)) :- !.
 may_halt(plus(T)) :- !, may_halt(T).
-may_halt(optional(_)).
+may_halt(optional(_)) :- !.
 
 %% proposal for the with operator, to be tested
 
 %% the with operator can never halt
 
 %% proposal for constant declarations
-may_halt(const(Vars, Exps, T)) :- eval_exps(Vars,Exps,Subs),apply_sub_trace_exp(Subs,T,T2),!,may_halt(T2). %% cut after apply_sub_trace_exp is essential to avoid divergence in case of failure due to coinduction
+may_halt(const(Vars, Exps, T)) :- !,eval_exps(Vars,Exps,Subs),apply_sub_trace_exp(Subs,T,T2),!,may_halt(T2). %% cut after apply_sub_trace_exp is essential to avoid divergence in case of failure due to coinduction
 
 % see if trace expression is equivalent to 1 (only sound, not complete)
 is1(1) :- !.
