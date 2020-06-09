@@ -10,9 +10,7 @@
 /*    January, 2019: support for RML                                                       */
 /*    May, 2019: support for local const declarations                                      */
 /*    June, 2020: some fixes: added all cuts for next/4 and apply_sub_trace_exp/3          */
-/*                added singleton event type patterns to replace the prefixing operator    */
-/*                fixed precedence for cut for next/4 in guarded terms                     */
-/*                prefixing not removed for legacy reasons                                 */
+/*                fixed precedence to correctly manage cut in next/4 for guarded terms     */
 /*******************************************************************************************/
 
 /* Transition rules */
