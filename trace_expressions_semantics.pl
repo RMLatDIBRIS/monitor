@@ -4,11 +4,15 @@
 :- coinductive apply_sub_trace_exp/3.
 
 /*******************************************************************************************/
-/*                              PARAMETRIC TRACE EXPRESSIONS                                                   */
-/*    Aug 11, 2017: fixed bug with coinduction                                                                   */
-/*    March 2, 2018: test with generic trace expressions                                                    */
-/*    January, 2019: support for RML                                                                                  */
-/*    May, 2019: support for const declarations                                                                  */
+/*                              PARAMETRIC TRACE EXPRESSIONS                               */
+/*    Aug 11, 2017: fixed bug with coinduction                                             */
+/*    March 2, 2018: test with generic trace expressions                                   */
+/*    January, 2019: support for RML                                                       */
+/*    May, 2019: support for local const declarations                                      */
+/*    June, 2020: some fixes: added all cuts for next/4 and apply_sub_trace_exp/3          */
+/*                added singleton event type patterns to replace the prefixing operator    */
+/*                fixed precedence for cut for next/4 in guarded terms                     */
+/*                prefixing not removed for legacy reasons                                 */
 /*******************************************************************************************/
 
 /* Transition rules */
@@ -19,12 +23,16 @@ next(T, E, T1) :- next(T, E, T1, []).
 %% old patch to avoid problems with json dicts, resolved by using value_string_as(atom) option
 %% next(T, String, T1) :- open_string(String,Stream),json_read_dict(Stream,E,[value_string_as(atom)]), next(T, E, T1, []).
 
+%% June 2020, Davide: added explicit failure for eps; not just an optimization, it ensures also correctness if
+%% a default clause is added at the end, for instance to correctly deal with singleton event type patterns and finite failure
+next(eps,_,_,_) :- !,fail.
+
 % next transition function (parametric version)
-next(1,_,1,[]).  %% 1 is the universe of all traces
+next(1,_,1,[]) :- !.  %% 1 is the universe of all traces
 
 %% 0 is the empty set of traces, no transion rules
 
-next(ET:T, E, T, S) :- match(E, ET, S).
+next(ET:T, E, T, S) :- !,match(E, ET, S).
 
 next(T1\/_, E, T2, S) :- next(T1, E, T2, S),!.
 next(_\/T1, E, T2, S) :- !,next(T1, E, T2, S).
@@ -43,7 +51,7 @@ next(var(X, T), E, T3, RetSubs) :- atom(X),!,next(T, E, T1, Subs1),split([X],Sub
 
 %% general clause
 next(var(Vars, T), E, T3, RetSubs) :-
-    next(T, E, T1, Subs),split(Vars,Subs,SubsVars,RetSubs),apply_sub_trace_exp(SubsVars,T1,T2),unbound(Vars,Subs,UVars),!,(UVars==[]->T3=T2;T3=var(UVars,T2)).
+    !,next(T, E, T1, Subs),split(Vars,Subs,SubsVars,RetSubs),apply_sub_trace_exp(SubsVars,T1,T2),unbound(Vars,Subs,UVars),!,(UVars==[]->T3=T2;T3=var(UVars,T2)).
 
 %% generalization for multiple variables to be implemented
 
@@ -85,12 +93,12 @@ next((ET>T), E, T1, S) :- !,match(E, ET, S1) -> next(T, E, T1, S2),merge(S1, S2,
 next(app(gen(X,T1),Arg), E, T3, S) :- atom(X),!,eval(Arg,Val),apply_sub_trace_exp([X=Val], T1, T2),!,next(T2, E, T3, S). %% agaian here the cut after apply_sub_trace_exp is essential to avoid divergence in case of failure due to coinduction
 
 %% general clause 
-next(app(gen(Vars,T1),Args), E, T3, S) :- eval_exps(Vars,Args,Sub),apply_sub_trace_exp(Sub,T1,T2),!,next(T2, E, T3, S).%% agaian here the cut after apply_sub_trace_exp is essential to avoid divergence in case of failure due to coinduction
+next(app(gen(Vars,T1),Args), E, T3, S) :- !,eval_exps(Vars,Args,Sub),apply_sub_trace_exp(Sub,T1,T2),!,next(T2, E, T3, S).%% agaian here the cut after apply_sub_trace_exp is essential to avoid divergence in case of failure due to coinduction
 
 %% proposal for guarded trace expressions 
 %% comment: do we really need to return a substitution with solve? According to the ecoop19 calculus guards should be only ground
 %% this should be more in line with the ecoop19/oopsla19 calculus
-next(guarded(P,T1,T2),E,T,S) :- !,P -> next(T1,E,T,S);next(T2,E,T,S).
+next(guarded(P,T1,T2),E,T,S) :- !,(P -> next(T1,E,T,S);next(T2,E,T,S)). %% June 2020, Davide's fix: added parentheses to properly manage cut and precedence of ',' over '->' 
 
 %%next(guarded(P,T1,T2),E,T,S) :- !,solve(P,S1) -> next(T1,E,T,S2), merge(S1, S2, S);next(T2,E,T,S).
 
@@ -116,10 +124,9 @@ next(optional(T1), E, T2, S) :- !, next(T1, E, T2, S).
 
 next(with(ET,T,G), E, T, S) :- !,match(E, ET, S),apply_sub_pred(S,G,G2),G2.
 
-%% proposal for constant declarations
+%% proposal for local constant declarations
 next(const(Vars, Exps, T1), E, T3, RetSubs) :-
     eval_exps(Vars,Exps,Subs),apply_sub_trace_exp(Subs,T1,T2),!,next(T2,E,T3,RetSubs). %% cut after apply_sub_trace_exp is essential to avoid divergence in case of failure due to coinduction
-
 
 %% eval predicates for arguments of generics: for the moment only number/boolean expressions, strings and atoms are supported
 num_exp(Exp) :- Exp=..[Op|_],memberchk(Op,[+,-,/,*]).
@@ -315,7 +322,7 @@ apply_sub_trace_exp(S,T1/\T2,T3/\T4) :- !,apply_sub_trace_exp(S,T1,T3),apply_sub
 %% legacy clause for just one variable, no need to use a list in this case
 apply_sub_trace_exp(S,var(X, T1),var(X, T2)) :- atom(X),!,split([X],S,_Sx,Srest),apply_sub_trace_exp(Srest,T1,T2).
 %% general clause 
-apply_sub_trace_exp(S,var(Vars, T1),var(Vars, T2)) :- split(Vars,S,_Svars,Srest),apply_sub_trace_exp(Srest,T1,T2).
+apply_sub_trace_exp(S,var(Vars, T1),var(Vars, T2)) :- !,split(Vars,S,_Svars,Srest),apply_sub_trace_exp(Srest,T1,T2).
 apply_sub_trace_exp(S,(ET1>>T1;T2),(ET2>>T3;T4)) :- !,apply_sub_event_type(S,ET1,ET2),apply_sub_trace_exp(S,T1,T3),apply_sub_trace_exp(S,T2,T4).
 apply_sub_trace_exp(S,ET1>>T1,ET2>>T2) :- !,apply_sub_event_type(S,ET1,ET2),apply_sub_trace_exp(S,T1,T2).
 apply_sub_trace_exp(S,(ET1>T1;T2),(ET2>T3;T4)) :- !,apply_sub_event_type(S,ET1,ET2),apply_sub_trace_exp(S,T1,T3),apply_sub_trace_exp(S,T2,T4).
@@ -331,7 +338,7 @@ apply_sub_trace_exp(S,app(gen(X,T1),Arg1),app(gen(X,T2),Arg2)) :-
 
 %% generic clause
 apply_sub_trace_exp(S,app(gen(Vars,T1),Args1),app(gen(Vars,T2),Args2)) :-
-    apply_sub_arg(S,Args1,Args2),split(Vars,S,_Svars,Srest),apply_sub_trace_exp(Srest,T1,T2).
+    !,apply_sub_arg(S,Args1,Args2),split(Vars,S,_Svars,Srest),apply_sub_trace_exp(Srest,T1,T2).
 
 %% proposal for guarded trace expressions
 
@@ -358,7 +365,7 @@ apply_sub_trace_exp(S, optional(T1), optional(T2)) :- !, apply_sub_trace_exp(S, 
 apply_sub_trace_exp(S,with(ET,T,G),with(ET2,T2,G2)) :- !, apply_sub_event_type(S, ET, ET2), apply_sub_trace_exp(S, T, T2), apply_sub_pred(S,G,G2). 
 
 %% proposal for constant declarations
-apply_sub_trace_exp(S,const(Vars, Exps1, T1),const(Vars, Exps2, T2)) :- apply_sub_arg(S,Exps1,Exps2),split(Vars,S,_Svars,Srest),apply_sub_trace_exp(Srest,T1,T2).
+apply_sub_trace_exp(S,const(Vars, Exps1, T1),const(Vars, Exps2, T2)) :- !,apply_sub_arg(S,Exps1,Exps2),split(Vars,S,_Svars,Srest),apply_sub_trace_exp(Srest,T1,T2).
 
 % substitution inside event types
 apply_sub_event_type([],ET,ET) :- !.
