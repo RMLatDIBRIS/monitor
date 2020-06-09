@@ -9,7 +9,7 @@
 /*    March 2, 2018: test with generic trace expressions                                   */
 /*    January, 2019: support for RML                                                       */
 /*    May, 2019: support for local const declarations                                      */
-/*    June, 2020: some fixes: added all cuts for next/4, may_halt and apply_sub_trace_exp/3     */
+/*    June, 2020: some fixes: added all cuts for next/4, may_halt/1, apply_sub_trace_exp/3 */
 /*                fixed precedence to correctly manage cut in next/4 for guarded terms     */
 /*******************************************************************************************/
 
