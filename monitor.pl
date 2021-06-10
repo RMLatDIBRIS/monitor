@@ -53,10 +53,10 @@ read_trace(TraceFile, TraceStream) :-
     	_,
     	(write('trace file not found'), nl, halt(1))).
 
-verify(TraceStream, TraceExp, EventId) :-
-	at_end_of_stream(TraceStream) ->
-		verify_end(TraceExp) ;
-		verify_events(TraceStream, TraceExp, EventId).
+%% verify(TraceStream, TraceExp, EventId) :-
+%% 	at_end_of_stream(TraceStream) ->
+%% 		verify_end(TraceExp) ;
+%% 		verify_events(TraceStream, TraceExp, EventId).
 
 % check wether end of trace is allowed
 verify_end(TraceExp) :- may_halt(TraceExp) ->
@@ -64,9 +64,24 @@ verify_end(TraceExp) :- may_halt(TraceExp) ->
 	(log('Unexpected end of trace\n'), false).
 
 % verify one event and then proceed recursively
-verify_events(TraceStream, TraceExp, EventId) :-
-	json_read_dict(TraceStream, Event,[end_of_file(empty{})]),
-	(next(TraceExp, Event, NewTraceExp)
-	 -> (log('matched event #'), log(EventId), log(': '), dict_pairs(Event, _, Fields), log(Fields), lognl, NewEventId is EventId+1, verify(TraceStream, NewTraceExp, NewEventId))
-	 ;  (log('ERROR on event #'), log(EventId), log(': '), dict_pairs(Event, _, Fields), log(Fields), lognl, false)
-	).
+%%% important remark:
+%%% json_read_dict(TraceStream, Event) throws error(syntax_error(json(unexpected_end_of_file)),_)
+%%% if EOF is hit, that is, before at_end_of_stream(TraceStream) succeeds
+%%% the workaround json_read_dict(TraceStream, Event,[end_of_file(empty{})]) does not work
+%%% because anyway an extraneous event must be returned at the end of the file (the empty event in the
+%%% proposed workaround) that may invalidate the specification
+%%% the proposed solution is to catch the exception and call verify_end. 
+%%% the previous version of verify (commented) is useless, 'verify_events' has been renamed 'verify'
+
+verify(TraceStream, TraceExp, EventId) :-
+    catch( 
+	(
+	    json_read_dict(TraceStream, Event),
+	    (next(TraceExp, Event, NewTraceExp)
+	    -> (log('matched event #'), log(EventId), log(': '), dict_pairs(Event, _, Fields), log(Fields), lognl, NewEventId is EventId+1, verify(TraceStream, NewTraceExp, NewEventId))
+	    ;  (log('ERROR on event #'), log(EventId), log(': '), dict_pairs(Event, _, Fields), log(Fields), lognl, false)
+	    )
+	),
+	error(syntax_error(json(unexpected_end_of_file)),_),
+	verify_end(TraceExp)).
+	
