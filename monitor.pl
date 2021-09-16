@@ -8,6 +8,10 @@
 %% optional
 %% - --silent
 %% - --reject
+%% remark (Davide) flags should be managed in a better and more efficient way with conditional compilation
+%% :- if(:Goal) ... :- elif(:Goal) ... :- else ... :- endif
+%% see https://www.swi-prolog.org/pldoc/man?section=conditionalcompilation
+%% flag debug should be added to merge monitor.pl with monitor_debug.pl
 
 main :-
 	current_prolog_flag(argv, [SpecFile, TraceFile | _]), !,
@@ -73,13 +77,15 @@ verify_end(TraceExp) :- may_halt(TraceExp) ->
 %%% the proposed solution is to catch the exception and call verify_end. 
 %%% the previous version of verify (commented) is useless, 'verify_events' has been renamed 'verify'
 
+%%% output format
+%%% dict_pairs(Event, _, Fields), log(Fields) replaced with log(Event) but not sure which is the more readable output 
 verify(TraceStream, TraceExp, EventId) :-
     catch( 
 	(
 	    json_read_dict(TraceStream, Event),
 	    (next(TraceExp, Event, NewTraceExp)
-	    -> (log('matched event #'), log(EventId), log(': '), dict_pairs(Event, _, Fields), log(Fields), lognl, NewEventId is EventId+1, verify(TraceStream, NewTraceExp, NewEventId))
-	    ;  (log('ERROR on event #'), log(EventId), log(': '), dict_pairs(Event, _, Fields), log(Fields), lognl, false)
+	    -> (log('matched event #'), log(EventId), log(': '), log(Event), lognl, NewEventId is EventId+1, verify(TraceStream, NewTraceExp, NewEventId))
+	    ;  (log('ERROR on event #'), log(EventId), log(': '), log(Event), lognl, false)
 	    )
 	),
 	error(syntax_error(json(unexpected_end_of_file)),_),
