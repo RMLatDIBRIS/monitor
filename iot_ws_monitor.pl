@@ -28,7 +28,8 @@
 :- current_prolog_flag(argv, [Spec|_]), use_module(Spec).
 
 
-server(Port) :- http_server(http_dispatch,[port('10.251.61.71':Port),workers(1)]). %% one worker to guarantee event sequentiality
+server(Port) :- http_server(http_dispatch,[port('127.0.0.1':Port),workers(1)]). %% one worker to guarantee event sequentiality
+%% http_server(http_dispatch,[port('10.251.61.71':Port),workers(1)]). %% one worker to guarantee event sequentiality
 %% server(Port) :- http_server(http_dispatch,[port('127.0.0.1':Port),workers(1)]). %% one worker to guarantee event sequentiality
 
 log(Log) :-
@@ -41,7 +42,7 @@ log(Log) :-
     true.
 		 
 manage_event(WebSocket) :-
-    ws_receive(WebSocket, Msg, [format(json),value_string_as(atom)]), %% value_string_as(atom) passed as option to json_read_dict/3
+    ws_receive(WebSocket, Msg, [format(json),value_string_as(string)]), %% value_string_as(atom) passed as option to json_read_dict/3
     (Msg.opcode==close ->
 	     true;
 	 E=Msg.data,
