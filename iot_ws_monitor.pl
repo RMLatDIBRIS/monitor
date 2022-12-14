@@ -25,8 +25,7 @@
 
 % load specification
 
-:- current_prolog_flag(argv, [Spec|_]), use_module(Spec).
-
+%:- current_prolog_flag(argv, [Spec|_]), use_module(Spec).
 
 server(Port) :- http_server(http_dispatch,[port('127.0.0.1':Port),workers(1)]). %% one worker to guarantee event sequentiality
 %% http_server(http_dispatch,[port('10.251.61.71':Port),workers(1)]). %% one worker to guarantee event sequentiality
@@ -57,4 +56,4 @@ manage_event(WebSocket) :-
 exception(undefined_global_variable, state, retry) :- trace_expression(_, TE), nb_setval(state,TE).
 exception(undefined_global_variable, log, retry) :- (current_prolog_flag(argv, [_,LogFile|_])->open(LogFile,append,Stream);Stream=null),nb_setval(log, Stream).
 
-:- server(80).
+:- current_prolog_flag(argv, [Spec|_]), use_module(Spec), server(80).
