@@ -8,24 +8,53 @@
 %% optional
 %% - --silent
 %% - --reject
-%% remark (Davide) flags should be managed in a better and more efficient way with conditional compilation
+%% remark (Davide) flags are managed in a better and more efficient way with conditional compilation
 %% :- if(:Goal) ... :- elif(:Goal) ... :- else ... :- endif
 %% see https://www.swi-prolog.org/pldoc/man?section=conditionalcompilation
 %% flag debug should be added to merge monitor.pl with monitor_debug.pl
 
+%% predicates to manage options
+
+option(Opt) :-
+    current_prolog_flag(argv, [_, _ | Arguments]),
+    member(Opt, Arguments).
+
+reject :- fail.
+:- if(option('--reject')).
+reject.
+:- endif.
+
+:- discontiguous log/1,logln/1.
+log(_):-fail.
+logln(_):-fail.
+:- if(option('--silent')).
+log(_).
+logln(_).
+:- else.
+log(X) :- write(X).
+logln(X) :- writeln(X).
+:- endif.
+
+write_info(_,_,_) :- fail.
+:- if(option('--verbose')).
+write_info(EventId,Event,NewTraceExp) :- log('matched event #'), log(EventId), log(': '), logln(Event), logln(NewTraceExp).
+:- else.
+write_info(EventId,Event,_) :- log('matched event #'), log(EventId), log(': '), logln(Event).
+:- endif.
+
 main :-
-    current_prolog_flag(argv, [SpecFile, TraceFile | _]), %!,
+    current_prolog_flag(argv, [SpecFile, TraceFile | _]), %!, %% needed arguments
     load_spec(SpecFile,TraceExp),
     read_trace(TraceFile, TraceStream),
-    (verify(TraceStream, TraceExp, 1),\+ reject ->
-	 (lognl('Execution terminated correctly'), Exit=0); (lognl('Trace did not match specification'), Exit=1)),
+    (verify(TraceStream, TraceExp) ->
+	 (writeln('Execution terminated correctly'), Exit=0); (writeln('Trace did not match specification'), Exit=1)),
     close(TraceStream),
     halt(Exit).
 
 main :-
 	writeln('expected args: <spec file> <trace file>'),
 	halt(1).
-
+	
 file_not_found(Fname) :- write('File not found: '), writeln(Fname), halt(1).
 
 load_spec(SpecFile,TraceExp) :-
@@ -44,21 +73,6 @@ read_trace(TraceFile, TraceStream) :-
 	)
     ).
 
-% true if --silent flag was given
-silent :-
-	current_prolog_flag(argv, [_, _ | Arguments]),
-	member('--silent', Arguments).
-
-% true if --reject flag was given
-reject :-
-	current_prolog_flag(argv, [_, _ | Arguments]),
-	member('--reject', Arguments).
-
-% only print if not in silent mode
-log(X) :- silent -> true ; write(X).
-lognl(X)  :- silent -> true ; writeln(X).
-
-
 %% verify(TraceStream, TraceExp, EventId) :-
 %% 	at_end_of_stream(TraceStream) ->
 %% 		verify_end(TraceExp) ;
@@ -67,7 +81,7 @@ lognl(X)  :- silent -> true ; writeln(X).
 % check wether end of trace is allowed
 verify_end(TraceExp) :- may_halt(TraceExp) ->
 	true ;
-	(log('Unexpected end of trace\n'), false).
+	(log('unmatched end of trace\n'), fail).
 
 % verify one event and then proceed recursively
 %%% important remark:
@@ -81,13 +95,19 @@ verify_end(TraceExp) :- may_halt(TraceExp) ->
 
 %%% output format
 %%% dict_pairs(Event, _, Fields), log(Fields) replaced with log(Event) but not sure which is the more readable output 
+verify(TraceStream, TraceExp) :-
+    catch(
+	(reject -> \+ verify(TraceStream, TraceExp, 1); verify(TraceStream, TraceExp, 1)),
+        error(syntax_error(json(illegal_json)),_),
+	(writeln('Illegal JSON syntax'),halt(1))).
+
 verify(TraceStream, TraceExp, EventId) :-
     catch( 
 	(
 	    json_read_dict(TraceStream, Event),
 	    (next(TraceExp, Event, NewTraceExp)
-	    -> (log('matched event #'), log(EventId), log(': '), lognl(Event), NewEventId is EventId+1, verify(TraceStream, NewTraceExp, NewEventId))
-	    ;  (log('ERROR on event #'), log(EventId), log(': '), lognl(Event), false)
+	    -> (write_info(EventId,Event,NewTraceExp), NewEventId is EventId+1, verify(TraceStream, NewTraceExp, NewEventId))
+	    ;  (log('unmatched event #'), log(EventId), log(': '), logln(Event), fail)
 	    )
 	),
 	error(syntax_error(json(unexpected_end_of_file)),_),
