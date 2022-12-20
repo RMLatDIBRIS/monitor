@@ -6,7 +6,7 @@
 :- use_module(library(http/json_convert)).
 :- use_module(library(http/http_json)).
 
-:- use_module(trace_expressions_semantics).
+:- use_module(monitor(trace_expressions_semantics)).
 
 :- http_handler(/,http_upgrade_to_websocket(manage_event, []),[]). %%% default options for both the websocket and the http handler 
 

@@ -1,5 +1,5 @@
 :- use_module(library(http/json)).
-:- use_module(trace_expressions_semantics).
+:- use_module(monitor(trace_expressions_semantics)).
 :- initialization(main).
 
 %% arguments

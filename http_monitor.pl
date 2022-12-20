@@ -5,7 +5,7 @@
 :- use_module(library(http/json_convert)).
 :- use_module(library(http/http_json)).
 
-:- use_module(trace_expressions_semantics).
+:- use_module(monitor(trace_expressions_semantics)).
 
 :- http_handler(/,manage_request,[]).
 
