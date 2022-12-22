@@ -23,37 +23,44 @@
 %%  prolog_server_log.txt
 %%          logging enabled to file prolog_server_log.txt (optional argument)
 
-% load specification
+% initialization of the state of the worker thread: loads the specification and initializes gobal variable 'state' with it
 
-%:- current_prolog_flag(argv, [Spec|_]), use_module(Spec).
+init :- current_prolog_flag(argv, Argv), Argv = [Spec|Rest], use_module(Spec), trace_expression(_, TE), nb_setval(state,TE),
+(Rest = [LogFile|_]->open(LogFile,append,Stream);Stream=null),nb_setval(log_file, Stream).
+
+:- thread_initialization(init).
+
+%% predicates to manage the optional log file
+
+:- if(nb_getval(log_file,null)).
+log(_).
+:- else.
+log(Arg) :-
+        nb_getval(log_file,Stream),
+	(Arg=(TE,E)->
+	     writeln(Stream,"Trace expression:"),writeln(Stream,TE),writeln(Stream,"Event: "),writeln(Stream,E);
+	 writeln(Stream,"Error")),
+	nl(Stream),
+	flush_output(Stream).
+:- endif.
 
 server(Port) :- http_server(http_dispatch,[port('127.0.0.1':Port),workers(1)]). %% one worker to guarantee event sequentiality
 %% http_server(http_dispatch,[port('10.251.61.71':Port),workers(1)]). %% one worker to guarantee event sequentiality
 %% server(Port) :- http_server(http_dispatch,[port('127.0.0.1':Port),workers(1)]). %% one worker to guarantee event sequentiality
-
-log(Log) :-
-    nb_getval(log,Stream), Stream\==null->  %% optional logging of server activity
-	(Log=(TE,E)->
-	     writeln(Stream,"Trace expression:"),writeln(Stream,TE),writeln(Stream,"Event: "),writeln(Stream,E);
-	 writeln(Stream,"Error")),
-	nl(Stream),
-	flush_output(Stream);
-    true.
 		 
 manage_event(WebSocket) :-
     ws_receive(WebSocket, Msg, [format(json),value_string_as(string)]), %% value_string_as(atom) passed as option to json_read_dict/3
     (Msg.opcode==close ->
 	     true;
 	 E=Msg.data,
-	       nb_getval(state,TE1),
+	       catch(nb_getval(state,TE1),_,writeln(TE1)),
 	       log((TE1,E)),
 	       (next(TE1,E,TE2) -> nb_setval(state,TE2),Reply=_{error:false,data:E}; Reply=_{error:true,data:E}),
 %%	       (next(TE1,E,TE2) -> nb_setval(state,TE2),Reply=E.put(_{error:false}); Reply=E.put(_{error:true})),
 	       atom_json_dict(Json,Reply,[as(string)]),
 	       ws_send(WebSocket,string(Json)),
 	       manage_event(WebSocket)).
-		
-exception(undefined_global_variable, state, retry) :- trace_expression(_, TE), nb_setval(state,TE).
-exception(undefined_global_variable, log, retry) :- (current_prolog_flag(argv, [_,LogFile|_])->open(LogFile,append,Stream);Stream=null),nb_setval(log, Stream).
 
-:- current_prolog_flag(argv, [Spec|_]), use_module(Spec), server(80).
+%% starts the server
+
+:- initialization(server(80)).
