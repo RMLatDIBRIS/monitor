@@ -44,7 +44,7 @@ log(Arg) :-
 	flush_output(Stream).
 :- endif.
 
-server(Port) :- http_server(http_dispatch,[port('127.0.0.1':Port),workers(1)]). %% one worker to guarantee event sequentiality
+server(Port) :- http_server(http_dispatch,[port(Port),workers(1)]). %% one worker to guarantee event sequentiality
 %% http_server(http_dispatch,[port('10.251.61.71':Port),workers(1)]). %% one worker to guarantee event sequentiality
 %% server(Port) :- http_server(http_dispatch,[port('127.0.0.1':Port),workers(1)]). %% one worker to guarantee event sequentiality
 		 
@@ -63,4 +63,7 @@ manage_event(WebSocket) :-
 
 %% starts the server
 
-:- initialization(server(80)).
+:- initialization(server('localhost':80)).
+%% :- initialization(server('10.251.61.71':80)).
+%% :- initialization(server('192.168.178.38':80)).
+
