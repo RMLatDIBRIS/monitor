@@ -47,8 +47,6 @@ log(Arg) :-
 
 server(Port) :- http_server(http_dispatch,[port(Port),ssl([ certificate_file('cert.pem'),
                             key_file('key.pem')]),workers(1)]). %% one worker to guarantee event sequentiality
-%% http_server(http_dispatch,[port('10.251.61.71':Port),workers(1)]). %% one worker to guarantee event sequentiality
-%% server(Port) :- http_server(http_dispatch,[port('127.0.0.1':Port),workers(1)]). %% one worker to guarantee event sequentiality
 		 
 manage_event(WebSocket) :-
     ws_receive(WebSocket, Msg, [format(json),value_string_as(string)]), %% value_string_as(atom) passed as option to json_read_dict/3
