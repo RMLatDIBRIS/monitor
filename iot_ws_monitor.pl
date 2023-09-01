@@ -15,13 +15,7 @@
 %% second optional argument: a log file, if not provided no logging is performed
 
 %% example:
-%% swipl -p monitor=prolog prolog/server.pl -- http/omitted\ body/204\ response/spec.pl prolog_server_log.txt
-%% -p monitor=prolog
-%%          required option to indicate the path to func_match.pl (event domain implementation)
-%%  http/omitted\ body/204\ response/spec.pl
-%%          the trace expression (required argument)
-%%  prolog_server_log.txt
-%%          logging enabled to file prolog_server_log.txt (optional argument)
+%% sudo swipl -O -p monitor=pathToPrologMonitor iot_ws_monitor.pl -- RMLspec.pl logFile.txt
 
 % initialization of the state of the worker thread: loads the specification and initializes gobal variable 'state' with it
 
@@ -45,18 +39,15 @@ log(Arg) :-
 :- endif.
 
 server(Port) :- http_server(http_dispatch,[port(Port),workers(1)]). %% one worker to guarantee event sequentiality
-%% http_server(http_dispatch,[port('10.251.61.71':Port),workers(1)]). %% one worker to guarantee event sequentiality
-%% server(Port) :- http_server(http_dispatch,[port('127.0.0.1':Port),workers(1)]). %% one worker to guarantee event sequentiality
 		 
 manage_event(WebSocket) :-
-    ws_receive(WebSocket, Msg, [format(json),value_string_as(string)]), %% value_string_as(atom) passed as option to json_read_dict/3
+    ws_receive(WebSocket, Msg, [format(json)]), 
     (Msg.opcode==close ->
 	     true;
 	 E=Msg.data,
-	       catch(nb_getval(state,TE1),_,writeln(TE1)),
+	       nb_getval(state,TE1),
 	       log((TE1,E)),
 	       (next(TE1,E,TE2) -> nb_setval(state,TE2),Reply=_{error:false,data:E}; Reply=_{error:true,data:E}),
-%%	       (next(TE1,E,TE2) -> nb_setval(state,TE2),Reply=E.put(_{error:false}); Reply=E.put(_{error:true})),
 	       atom_json_dict(Json,Reply,[as(string)]),
 	       ws_send(WebSocket,string(Json)),
 	       manage_event(WebSocket)).
@@ -64,6 +55,4 @@ manage_event(WebSocket) :-
 %% starts the server
 
 :- initialization(server('localhost':80)).
-%% :- initialization(server('10.251.61.71':80)).
-%% :- initialization(server('192.168.178.38':80)).
 

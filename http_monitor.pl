@@ -15,33 +15,35 @@
 %% second optional argument: a log file, if not provided no logging is performed
 
 %% example:
-%% swipl -p node=prolog prolog/server.pl -- http/omitted\ body/204\ response/spec.pl prolog_server_log.txt
-%% -p node=prolog
-%%          required option to indicate the path to func_match.pl (event domain implementation)
-%%  http/omitted\ body/204\ response/spec.pl
-%%          the trace expression (required argument)
-%%  prolog_server_log.txt
-%%          logging enabled to file prolog_server_log.txt (optional argument)
+%% sudo swipl -O -p monitor=pathToPrologMonitor http_monitor.pl -- RMLspec.pl logFile.txt
 
-% load specification
-:- current_prolog_flag(argv, [Spec|_]), use_module(Spec).
+% initialization of the state of the worker thread: loads the specification and initializes gobal variable 'state' with it
 
-server(Port) :- http_server(http_dispatch,[port(localhost:Port),workers(1)]).
+init :- current_prolog_flag(argv, Argv), Argv = [Spec|Rest], use_module(Spec), trace_expression(_, TE), nb_setval(state,TE),
+(Rest = [LogFile|_]->open(LogFile,append,Stream);Stream=null),nb_setval(log_file, Stream).
 
-%TODO maybe is better to use the new representation for JSON?
-% see http://www.swi-prolog.org/pldoc/man?section=jsonsupport
+:- thread_initialization(init).
 
-%TODO better way than using globals with exceptions?
+%% predicates to manage the optional log file
 
-log(TE,E) :- nb_getval(log,Stream), Stream\==null->writeln(Stream,"Trace expression:"),writeln(Stream,TE),writeln(Stream,"Event: "),writeln(Stream,E),writeln(Stream, ''),flush_output(Stream);true.
+:- if(nb_getval(log_file,null)).
+log(_).
+:- else.
+log(Arg) :-
+        nb_getval(log_file,Stream),
+	(Arg=(TE,E)->
+	     writeln(Stream,"Trace expression:"),writeln(Stream,TE),writeln(Stream,"Event: "),writeln(Stream,E);
+	 writeln(Stream,"Error")),
+	nl(Stream),
+	flush_output(Stream).
+:- endif.
 
-manage_request(Request) :-
-    http_read_json(Request, E),
+server(Port) :- http_server(http_dispatch,[port(Port),workers(1)]).
+
+manage_request(Request) :- 
+    http_read_json_dict(Request, E),
     nb_getval(state,TE1),
-    log(TE1,E),
-    (next(TE1,E,TE2)->nb_setval(state,TE2),reply_json(json([error=(@false)]));reply_json(json([error=(@true)]))).
+    log((TE1,E)),
+    (next(TE1,E,TE2)->nb_setval(state,TE2),reply_json_dict(_{error:false,data:E});reply_json_dict(_{error:true,data:E})).
 
-exception(undefined_global_variable,state,retry) :- trace_expression(_, TE), nb_setval(state,TE).
-exception(undefined_global_variable,log, retry) :- (current_prolog_flag(argv, [_,LogFile|_])->open(LogFile,append,Stream);Stream=null),nb_setval(log, Stream).
-
-:- server(8081).
+:- initialization(server('localhost':80)).
