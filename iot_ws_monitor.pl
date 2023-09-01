@@ -38,7 +38,7 @@ log(Arg) :-
 	flush_output(Stream).
 :- endif.
 
-server(Port) :- http_server(http_dispatch,[port(Port),workers(1)]). %% one worker to guarantee event sequentiality
+server(Port) :- http_server(http_dispatch,[port(Port),workers(10)]). 
 		 
 manage_event(WebSocket) :-
     ws_receive(WebSocket, Msg, [format(json)]), 
