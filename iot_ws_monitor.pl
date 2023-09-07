@@ -54,5 +54,5 @@ manage_event(WebSocket) :-
 
 %% starts the server
 
-:- initialization(server('localhost':80)).
+:- initialization(server(80)).
 
