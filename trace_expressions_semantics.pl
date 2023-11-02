@@ -248,8 +248,8 @@ concat(T, eps, T) :- !.
 concat((T1l*T1r), T2, T1l*(T1r*T2)) :- !.
 concat(T1, T2, T1*T2).
 
-conj(eps/\T, eps) :- may_halt(T), !.
-conj(T/\eps, eps) :- !,may_halt(T).
+conj(eps/\T, T2) :- !, (may_halt(T) -> T2=eps;T2=0).  %% Nov 2023, Davide: some further optimization
+conj(T/\eps, T2) :- !, (may_halt(T) -> T2=eps;T2=0).
 conj(1,T,T) :- !.
 conj(T,1,T) :- !.
 conj((T1l/\T1r), T2, T1l/\(T1r/\T2)) :- !.
