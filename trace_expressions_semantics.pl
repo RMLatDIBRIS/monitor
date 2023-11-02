@@ -13,6 +13,7 @@
 /*                fixed precedence to correctly manage cut in next/4 for guarded terms     */
 /*    June, 2020: added singleton event type patterns to replace the prefixing operator    */
 /*                prefixing not removed for legacy reasons                                 */
+/*    Nov, 2023: more efficient optimization of conj with eps  */
 /*******************************************************************************************/
 
 /* Transition rules */
@@ -247,7 +248,8 @@ concat(T, eps, T) :- !.
 concat((T1l*T1r), T2, T1l*(T1r*T2)) :- !.
 concat(T1, T2, T1*T2).
 
-conj(eps/\eps, eps) :- !.
+conj(eps/\T, eps) :- may_halt(T), !.
+conj(T/\eps, eps) :- !,may_halt(T).
 conj(1,T,T) :- !.
 conj(T,1,T) :- !.
 conj((T1l/\T1r), T2, T1l/\(T1r/\T2)) :- !.
