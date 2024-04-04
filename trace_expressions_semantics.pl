@@ -14,6 +14,7 @@
 /*    June, 2020: added singleton event type patterns to replace the prefixing operator    */
 /*                prefixing not removed for legacy reasons                                 */
 /*    Nov, 2023: more efficient optimization of conj with eps  */
+/*    Apr, 2024: optimization for concatenation in the rewriting rules for star and plus  */
 /*******************************************************************************************/
 
 /* Transition rules */
@@ -116,8 +117,8 @@ next(guarded(P,T1,T2),E,T,S) :- !,(P -> next(T1,E,T,S);next(T2,E,T,S)). %% June 
 next(clos(T1), E, T3, S) :- !,next(T1, E, T2, S),prefix_clos(T2,T3).
 
 % regex-like operators
-next(star(T1), E, T2*star(T1), S) :- !, next(T1, E, T2, S).
-next(plus(T1), E, T2*star(T1), S) :- !, next(T1, E, T2, S).
+next(star(T1), E, T, S) :- !, next(T1, E, T2, S), concat(T2,star(T1),T).
+next(plus(T1), E, T, S) :- !, next(T1, E, T2, S), concat(T2,star(T1),T).
 next(optional(T1), E, T2, S) :- !, next(T1, E, T2, S).
 
 %% proposal for the with operator, to be tested
