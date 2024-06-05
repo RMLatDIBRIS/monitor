@@ -15,6 +15,7 @@
 /*                prefixing not removed for legacy reasons                                 */
 /*    Nov, 2023: more efficient optimization of conj with eps  */
 /*    Apr, 2024: optimization for concatenation in the rewriting rules for star and plus  */
+/*    June, 2024: optimization for the var construct  */
 /*******************************************************************************************/
 
 /* Transition rules */
@@ -49,11 +50,11 @@ next(T1/\T2, E, T, S) :- !,next(T1, E, T3, S1),next(T2, E, T4, S2),merge(S1, S2,
 
 %% version with split (really optimized?) %% important, the cut after apply_sub_trace_exp is essential to avoid divergence in case of failure due to coindcution
 %% legacy clause for just one variable, no need to use a list in this case
-next(var(X, T), E, T3, RetSubs) :- atom(X),!,next(T, E, T1, Subs1),split([X],Subs1,XSubs,RetSubs),apply_sub_trace_exp(XSubs,T1,T2),!,(XSubs==[]->T3=var(X,T2);T3=T2).
+next(var(X, T), E, T3, RetSubs) :- atom(X),!,next(T, E, T1, Subs1),split([X],Subs1,XSubs,RetSubs),apply_sub_trace_exp(XSubs,T1,T2),!,(XSubs==[]->variables(X,T2,T3);T3=T2).
 
 %% general clause
 next(var(Vars, T), E, T3, RetSubs) :-
-    !,next(T, E, T1, Subs),split(Vars,Subs,SubsVars,RetSubs),apply_sub_trace_exp(SubsVars,T1,T2),unbound(Vars,Subs,UVars),!,(UVars==[]->T3=T2;T3=var(UVars,T2)).
+    !,next(T, E, T1, Subs),split(Vars,Subs,SubsVars,RetSubs),apply_sub_trace_exp(SubsVars,T1,T2),unbound(Vars,Subs,UVars),!,(UVars==[]->T3=T2;variables(UVars,T2,T3)).
 
 %% generalization for multiple variables to be implemented
 
@@ -255,6 +256,10 @@ conj(1,T,T) :- !.
 conj(T,1,T) :- !.
 conj((T1l/\T1r), T2, T1l/\(T1r/\T2)) :- !.
 conj(T1, T2, T1/\T2).
+
+variables(_,eps,eps) :- !.
+variables(_,1,1) :- !.
+variables(Vars,T,var(Vars,T)).
 
 %% optimization for filters
 %% to be done: optimizations with special predefined event types any and none
