@@ -2,12 +2,13 @@
 :- use_module(monitor(trace_expressions_semantics)).
 :- initialization(main).
 
-%% arguments
+%% required arguments
 %% - a specification file
 %% - a log file containing the trace
-%% optional
-%% - --silent
-%% - --reject
+%% options
+%%  --silent no information is displayed on transitions
+%%  --verbose both events and states are displayed for each transition, default only events are displayed 
+%%  --reject accepts invalid traces 
 %% remark (Davide) flags are managed in a better and more efficient way with conditional compilation
 %% :- if(:Goal) ... :- elif(:Goal) ... :- else ... :- endif
 %% see https://www.swi-prolog.org/pldoc/man?section=conditionalcompilation
