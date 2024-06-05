@@ -12,10 +12,12 @@
 
 %% arguments
 %% the server expects a required first argument: the filename containing the specified trace expression
-%% second optional argument: a log file, if not provided no logging is performed
+%% second optional argument: the server port, default is 80
+%% third optional argument: a log file, if not provided no logging is performed
+%% warning: if the log file is provided, then the port is required even for the default value
 
 %% example:
-%% sudo swipl -O -p monitor=pathToPrologMonitor iot_ws_monitor.pl -- RMLspec.pl logFile.txt
+%% sudo swipl -O -p monitor=pathToPrologMonitor iot_ws_monitor.pl -- RMLspec.pl (port? | (port logFile)?)
 
 % initialization of the state of the worker thread: loads the specification and initializes gobal variable 'state' with it
 

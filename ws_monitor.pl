@@ -1,3 +1,5 @@
+%% obsolete version, replaced by iot_ws(s)_monitor.pl
+
 :- use_module(library(http/websocket)).
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_dispatch)).
