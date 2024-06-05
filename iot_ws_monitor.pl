@@ -20,7 +20,7 @@
 % initialization of the state of the worker thread: loads the specification and initializes gobal variable 'state' with it
 
 init :- current_prolog_flag(argv, Argv), Argv = [Spec|Rest], use_module(Spec), trace_expression(_, TE), nb_setval(state,TE),
-(Rest = [LogFile|_]->open(LogFile,append,Stream);Stream=null),nb_setval(log_file, Stream).
+(Rest = [Port|LogArg] -> atom_number(Port,Addr),nb_setval(port,Addr),(LogArg = [LogFile|_]->open(LogFile,append,Stream),nb_setval(log_file, Stream);nb_setval(log_file,null));nb_setval(port,80),nb_setval(log_file, null)).
 
 :- thread_initialization(init).
 
@@ -54,5 +54,5 @@ manage_event(WebSocket) :-
 
 %% starts the server
 
-:- initialization(server(80)).
+:- nb_getval(port,Port),initialization(server(Port)).
 
