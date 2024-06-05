@@ -34,9 +34,9 @@ log(_).
 :- else.
 log(Arg) :-
         nb_getval(log_file,Stream),
-	(Arg=(TE,E)->
-	     writeln(Stream,"Trace expression:"),writeln(Stream,TE),writeln(Stream,"Event: "),writeln(Stream,E);
-	 writeln(Stream,"Error")),
+	(Arg=(TE1,E,TE2)->
+	     writeln(Stream,"Initial state:"),writeln(Stream,TE1),writeln(Stream,"Event: "),writeln(Stream,E),writeln(Stream,"Final state:"),writeln(Stream,TE2);
+	 writeln(Stream,"Logging error")),
 	nl(Stream),
 	flush_output(Stream).
 :- endif.
@@ -49,8 +49,7 @@ manage_event(WebSocket) :-
 	     true;
 	 E=Msg.data,
 	       nb_getval(state,TE1),
-	       log((TE1,E)),
-	       (next(TE1,E,TE2) -> nb_setval(state,TE2),Reply=_{error:false,data:E}; Reply=_{error:true,data:E}),
+	       (next(TE1,E,TE2) -> nb_setval(state,TE2),log((TE1,E,TE2)),Reply=_{error:false,data:E}; log((TE1,E,error)),Reply=_{error:true,data:E}),
 	       atom_json_dict(Json,Reply,[as(string)]),
 	       ws_send(WebSocket,string(Json)),
 	       manage_event(WebSocket)).

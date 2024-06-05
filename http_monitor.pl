@@ -33,19 +33,18 @@ log(_).
 :- else.
 log(Arg) :-
         nb_getval(log_file,Stream),
-	(Arg=(TE,E)->
-	     writeln(Stream,"Trace expression:"),writeln(Stream,TE),writeln(Stream,"Event: "),writeln(Stream,E);
-	 writeln(Stream,"Error")),
+	(Arg=(TE1,E,TE2)->
+	     writeln(Stream,"Initial state:"),writeln(Stream,TE1),writeln(Stream,"Event: "),writeln(Stream,E),writeln(Stream,"Final state:"),writeln(Stream,TE2);
+	 writeln(Stream,"Logging error")),
 	nl(Stream),
 	flush_output(Stream).
 :- endif.
 
-server(Port) :- http_server(http_dispatch,[port(Port),workers(1)]).
+server(Port) :- http_server(http_dispatch,[port(Port),workers(10)]).
 
 manage_request(Request) :- 
     http_read_json_dict(Request, E),
     nb_getval(state,TE1),
-    log((TE1,E)),
-    (next(TE1,E,TE2)->nb_setval(state,TE2),reply_json_dict(_{error:false,data:E});reply_json_dict(_{error:true,data:E})).
+    (next(TE1,E,TE2)->nb_setval(state,TE2),log((TE1,E,TE2)),reply_json_dict(_{error:false,data:E});log((TE1,E,error)),reply_json_dict(_{error:true,data:E})).
 
 :- nb_getval(port,Port),initialization(server(Port)).
