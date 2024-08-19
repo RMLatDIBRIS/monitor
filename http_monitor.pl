@@ -45,6 +45,6 @@ server(Port) :- http_server(http_dispatch,[port(Port),workers(10)]).
 manage_request(Request) :- 
     http_read_json_dict(Request, E),
     nb_getval(state,TE1),
-    (next(TE1,E,TE2)->nb_setval(state,TE2),log((TE1,E,TE2)),reply_json_dict(_{error:false,data:E});log((TE1,E,error)),reply_json_dict(_{error:true,data:E})).
+    (next(TE1,E,TE2)->nb_setval(state,TE2),log((TE1,E,TE2)),reply_json_dict(_{error:false,event:E});log((TE1,E,error)),reply_json_dict(_{error:true,event:E})).
 
 :- nb_getval(port,Port),initialization(server(Port)).
