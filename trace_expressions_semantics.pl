@@ -16,12 +16,13 @@
 /*    Nov, 2023: more efficient optimization of conj with eps  */
 /*    Apr, 2024: optimization for concatenation in the rewriting rules for star and plus  */
 /*    June, 2024: optimization for the var construct  */
+/*    Sept, 2024: fixes to correctly handle attribute variables used for clpr constraints */
 /*******************************************************************************************/
 
 /* Transition rules */
 
 % (main)
-next(T, E, T1) :- next(T, E, T1, []).
+next(T, E, T1) :- next(T, E, T1, _). /* fix for clpr constraints: there might be pending constraint variables not assigned to a particular value */
 
 %% old patch to avoid problems with json dicts, resolved by using value_string_as(atom) option
 %% next(T, String, T1) :- open_string(String,Stream),json_read_dict(Stream,E,[value_string_as(atom)]), next(T, E, T1, []).
@@ -312,7 +313,7 @@ split(Vs,S,S_in,S_out) :- acc_split(Vs,S,[],S_in,[],S_out). %% Vs: list of disti
 %% auxiliary predicate with accumulators
 acc_split(_,[],S_in,S_in,S_out,S_out).
 acc_split(Vs,[X=V|S],Acc_in,S_in,Acc_out,S_out) :- %% memberchk should work, substitutions should be always ground
-    memberchk(X,Vs) -> acc_split(Vs,S,[X=V|Acc_in],S_in,Acc_out,S_out);acc_split(Vs,S,Acc_in,S_in,[X=V|Acc_out],S_out). 
+    (memberchk(X,Vs),\+attvar(V)) -> acc_split(Vs,S,[X=V|Acc_in],S_in,Acc_out,S_out);acc_split(Vs,S,Acc_in,S_in,[X=V|Acc_out],S_out).  %% fix for clpr constraints: \+attvar(V) needed, substitution [X=V] must not be applied if V is a constraint variable not associated to a particular value 
 
 % auxiliary predicate to check whether substitution S maps variable X into value V 
 apply(S,X,V) :- memberchk(X=V,S). %% memberchk should work, substitutions should be always ground
