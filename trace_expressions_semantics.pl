@@ -3,7 +3,7 @@
 :- use_module(library(coinduction)).
 :- coinductive apply_sub_trace_exp/3.
 
-/*******************************************************************************************/
+/*****************************************************************************************************/
 /*                              PARAMETRIC TRACE EXPRESSIONS                               */
 /*    Aug 11, 2017: fixed bug with coinduction                                             */
 /*    March 2, 2018: test with generic trace expressions                                   */
@@ -16,8 +16,8 @@
 /*    Nov, 2023: more efficient optimization of conj with eps  */
 /*    Apr, 2024: optimization for concatenation in the rewriting rules for star and plus  */
 /*    June, 2024: optimization for the var construct  */
-/*    Sept, 2024: fixes to correctly handle attribute variables used for clpr constraints */
-/*******************************************************************************************/
+/*    Sept, 2024: fixes to correctly handle attribute variables used for clpr constraints in let statements */
+/*****************************************************************************************************/
 
 /* Transition rules */
 
@@ -55,7 +55,7 @@ next(var(X, T), E, T3, RetSubs) :- atom(X),!,next(T, E, T1, Subs1),split([X],Sub
 
 %% general clause
 next(var(Vars, T), E, T3, RetSubs) :-
-    !,next(T, E, T1, Subs),split(Vars,Subs,SubsVars,RetSubs),apply_sub_trace_exp(SubsVars,T1,T2),unbound(Vars,Subs,UVars),!,(UVars==[]->T3=T2;variables(UVars,T2,T3)).
+    !,next(T, E, T1, Subs),split(Vars,Subs,SubsVars,RetSubs),apply_sub_trace_exp(SubsVars,T1,T2),unbound(Vars,SubsVars,UVars),!,(UVars==[]->T3=T2;variables(UVars,T2,T3)). %% Davide: corrected unbound(Vars,Subs,UVars) into unbound(Vars,SubsVars,UVars): Subs may contain some constraint variables in Vars which must not be instantiated
 
 %% generalization for multiple variables to be implemented
 
@@ -313,7 +313,7 @@ split(Vs,S,S_in,S_out) :- acc_split(Vs,S,[],S_in,[],S_out). %% Vs: list of disti
 %% auxiliary predicate with accumulators
 acc_split(_,[],S_in,S_in,S_out,S_out).
 acc_split(Vs,[X=V|S],Acc_in,S_in,Acc_out,S_out) :- %% memberchk should work, substitutions should be always ground
-    (memberchk(X,Vs),\+attvar(V)) -> acc_split(Vs,S,[X=V|Acc_in],S_in,Acc_out,S_out);acc_split(Vs,S,Acc_in,S_in,[X=V|Acc_out],S_out).  %% fix for clpr constraints: \+attvar(V) needed, substitution [X=V] must not be applied if V is a constraint variable not associated to a particular value 
+    memberchk(X,Vs) -> (\+attvar(V)->acc_split(Vs,S,[X=V|Acc_in],S_in,Acc_out,S_out);acc_split(Vs,S,Acc_in,S_in,Acc_out,S_out));acc_split(Vs,S,Acc_in,S_in,[X=V|Acc_out],S_out).  %% fix for clpr constraints: \+attvar(V) needed, substitution [X=V] must not be applied if V is a constraint variable not associated to a particular value. Important remark: in this case the variables in neither inside or outside the scope, it must be considered unbound because the constraint variables is not yet associated with a value 
 
 % auxiliary predicate to check whether substitution S maps variable X into value V 
 apply(S,X,V) :- memberchk(X=V,S). %% memberchk should work, substitutions should be always ground

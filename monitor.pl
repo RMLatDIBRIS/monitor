@@ -82,7 +82,7 @@ read_trace(TraceFile, TraceStream) :-
 % check wether end of trace is allowed
 verify_end(TraceExp) :- may_halt(TraceExp) ->
 	true ;
-	(log('unmatched end of trace\n'), fail).
+	(writeln('Unmatched end of trace'), fail).
 
 % verify one event and then proceed recursively
 %%% important remark:
