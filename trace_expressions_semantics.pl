@@ -17,6 +17,7 @@
 /*    Apr, 2024: optimization for concatenation in the rewriting rules for star and plus  */
 /*    June, 2024: optimization for the var construct  */
 /*    Sept, 2024: fixes to correctly handle attribute variables used for clpr constraints in let statements */
+/*    Sept, 2024: reg-ex operator times{T}{N} (T repeated exactly N times) */
 /*****************************************************************************************************/
 
 /* Transition rules */
@@ -122,6 +123,8 @@ next(clos(T1), E, T3, S) :- !,next(T1, E, T2, S),prefix_clos(T2,T3).
 next(star(T1), E, T, S) :- !, next(T1, E, T2, S), concat(T2,star(T1),T).
 next(plus(T1), E, T, S) :- !, next(T1, E, T2, S), concat(T2,star(T1),T).
 next(optional(T1), E, T2, S) :- !, next(T1, E, T2, S).
+next(times(T1,1), E, T2, S) :- !, next(T1, E, T2, S).
+next(times(T1,N), E, T, S) :- N>1, !, M is N - 1, next(T1, E, T2, S), concat(T2,times(T1,M),T).
 
 %% proposal for the with operator, to be tested
 %% see the comment on solve/2 for guarded expressions
@@ -205,6 +208,8 @@ may_halt(clos(_)) :- !.
 may_halt(star(_)) :- !.
 may_halt(plus(T)) :- !, may_halt(T).
 may_halt(optional(_)) :- !.
+may_halt(times(_,0)) :- !.
+may_halt(times(T,N)) :- N>=1, !, may_halt(T).
 
 %% proposal for the with operator, to be tested
 
@@ -231,6 +236,7 @@ is1(clos(T)) :- is1(T).
 is1(star(T)) :- is1(T).
 is1(plus(T)) :- is1(T).
 is1(optional(T)) :- is1(T).
+is1(times(T,N)) :- N>0, is1(T).
 
     
 %%% optimizations
@@ -375,6 +381,7 @@ apply_sub_trace_exp(S, clos(T1), clos(T2)) :- !,apply_sub_trace_exp(S,T1,T2).
 apply_sub_trace_exp(S, star(T1), star(T2)) :- !, apply_sub_trace_exp(S, T1, T2).
 apply_sub_trace_exp(S, plus(T1), plus(T2)) :- !, apply_sub_trace_exp(S, T1, T2).
 apply_sub_trace_exp(S, optional(T1), optional(T2)) :- !, apply_sub_trace_exp(S, T1, T2).
+apply_sub_trace_exp(S, times(T1,N), times(T2,N)) :- !, apply_sub_trace_exp(S, T1, T2).
 
 %% proposal for the with operator, to be tested
 
