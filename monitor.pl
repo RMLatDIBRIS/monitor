@@ -102,15 +102,18 @@ verify(TraceStream, TraceExp) :-
         error(syntax_error(json(illegal_json)),_),
 	(writeln('Illegal JSON syntax'),halt(1))).
 
+%% Davide Sep 25, 2024: modified so that json_read_dict does not throw an exception when reaching
+%% the end-of-file. This allows removal of the catch clause to make the predicate tail recursive, to avoid stack overflow issues and to enhance performances
+
 verify(TraceStream, TraceExp, EventId) :-
-    catch( 
-	(
-	    json_read_dict(TraceStream, Event),
-	    (next(TraceExp, Event, NewTraceExp)
-	    -> (write_info(EventId,Event,NewTraceExp), NewEventId is EventId+1, verify(TraceStream, NewTraceExp, NewEventId))
-	    ;  (log('unmatched event #'), log(EventId), log(': '), logln(Event), fail)
-	    )
-	),
-	error(syntax_error(json(unexpected_end_of_file)),_),
-	verify_end(TraceExp)).
-	
+    json_read_dict(TraceStream, Event,[end_of_file(@(eof))]),
+    (Event == @(eof) -> %% the end_of_file has been reached
+	 verify_end(TraceExp)
+    ;
+    (next(TraceExp, Event, NewTraceExp)
+    -> (write_info(EventId,Event,NewTraceExp), NewEventId is EventId+1, verify(TraceStream, NewTraceExp, NewEventId))
+     ;  (log('unmatched event #'), log(EventId), log(': '), logln(Event), fail)
+    )).
+
+
+
