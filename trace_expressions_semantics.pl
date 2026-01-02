@@ -18,6 +18,7 @@
 /*    June, 2024: optimization for the var construct  */
 /*    Sept, 2024: fixes to correctly handle attribute variables used for clpr constraints in let statements */
 /*    Sept, 2024: reg-ex operator times{T}{N} (T repeated exactly N times) */
+/*    Jan, 2025: the definition of the may_halt predicate for prefix closure must be fixed . It should fail for the empty set of traces */
 /*****************************************************************************************************/
 
 /* Transition rules */
@@ -201,6 +202,7 @@ may_halt(guarded(P,T1,T2)) :- !,P->may_halt(T1);may_halt(T2).
 % may_halt never holds?
 
 %% proposal for prefix closure
+%% to be fixed! The predicate should fail for empty set of traces
 
 may_halt(clos(_)) :- !.
 
