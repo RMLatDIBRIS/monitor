@@ -318,10 +318,14 @@ split(_,[],[],[]) :- !.
 
 split(Vs,S,S_in,S_out) :- acc_split(Vs,S,[],S_in,[],S_out). %% Vs: list of distinct variables, S: initial substitution, S_in: part of S including vars in Vs, S_out=S\S_in
 
+%% checks if the variable is a CLPR variable, associated with the corresponding attribute,
+%% should be extended with get_attrs if more constraint domains are supported 
+is_clp_var(X) :- attvar(X), get_attr(X, clpqr_itf, _).
+
 %% auxiliary predicate with accumulators
 acc_split(_,[],S_in,S_in,S_out,S_out).
 acc_split(Vs,[X=V|S],Acc_in,S_in,Acc_out,S_out) :- %% memberchk should work, substitutions should be always ground
-    memberchk(X,Vs) -> (\+attvar(V)->acc_split(Vs,S,[X=V|Acc_in],S_in,Acc_out,S_out);acc_split(Vs,S,Acc_in,S_in,Acc_out,S_out));acc_split(Vs,S,Acc_in,S_in,[X=V|Acc_out],S_out).  %% fix for clpr constraints: \+attvar(V) needed, substitution [X=V] must not be applied if V is a constraint variable not associated to a particular value. Important remark: in this case the variables in neither inside or outside the scope, it must be considered unbound because the constraint variables is not yet associated with a value 
+    memberchk(X,Vs) -> (is_clp_var(V)->acc_split(Vs,S,Acc_in,S_in,Acc_out,S_out);acc_split(Vs,S,[X=V|Acc_in],S_in,Acc_out,S_out));acc_split(Vs,S,Acc_in,S_in,[X=V|Acc_out],S_out).  %% fix for clpr constraints: \+attvar(V) needed, substitution [X=V] must not be applied if V is a constraint variable not associated to a particular value. Important remark: in this case the variables in neither inside or outside the scope, it must be considered unbound because the constraint variables is not yet associated with a value 
 
 % auxiliary predicate to check whether substitution S maps variable X into value V 
 apply(S,X,V) :- memberchk(X=V,S). %% memberchk should work, substitutions should be always ground
